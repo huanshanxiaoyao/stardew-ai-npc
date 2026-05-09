@@ -9,7 +9,7 @@ from bridge.server import serve
 
 @pytest.mark.asyncio
 async def test_echo_roundtrip():
-    async with serve(host="127.0.0.1", port=0) as server:
+    async with serve(host="127.0.0.1", port=0, client_factory=None) as server:
         port = server.sockets[0].getsockname()[1]
         async with websockets.connect(f"ws://127.0.0.1:{port}") as ws:
             await ws.send(json.dumps({
@@ -32,7 +32,7 @@ async def test_echo_roundtrip():
 
 @pytest.mark.asyncio
 async def test_session_reset_no_reply():
-    async with serve(host="127.0.0.1", port=0) as server:
+    async with serve(host="127.0.0.1", port=0, client_factory=None) as server:
         port = server.sockets[0].getsockname()[1]
         async with websockets.connect(f"ws://127.0.0.1:{port}") as ws:
             await ws.send(json.dumps({
@@ -46,7 +46,7 @@ async def test_session_reset_no_reply():
 
 @pytest.mark.asyncio
 async def test_unknown_type_ignored_no_disconnect():
-    async with serve(host="127.0.0.1", port=0) as server:
+    async with serve(host="127.0.0.1", port=0, client_factory=None) as server:
         port = server.sockets[0].getsockname()[1]
         async with websockets.connect(f"ws://127.0.0.1:{port}") as ws:
             await ws.send(json.dumps({"type": "mystery", "v": 1}))

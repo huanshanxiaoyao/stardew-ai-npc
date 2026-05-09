@@ -14,6 +14,7 @@ from typing import AsyncIterator
 import websockets
 from websockets.asyncio.server import ServerConnection
 
+from bridge import llm as llm_mod
 from bridge.protocol import (
     NpcInteract,
     NpcReply,
@@ -24,15 +25,31 @@ from bridge.protocol import (
 log = logging.getLogger("bridge.server")
 
 
-async def _handle_npc_interact(msg: NpcInteract, history: dict[str, list[dict]]) -> NpcReply:
-    """Phase 2: pure echo. Phase 3 swaps the body for an LLM call."""
-    text = f"You clicked {msg.npc}"
-    history.setdefault(msg.npc, []).append({"role": "user", "text": ""})
-    history[msg.npc].append({"role": "assistant", "text": text})
-    return NpcReply(id=msg.id, npc=msg.npc, text=text, done=True)
+def _make_handler(client_factory):
+    """Returns an _handle_npc_interact bound to a client (or None for echo mode)."""
+    client = client_factory() if client_factory is not None else None
+
+    async def handler(msg: NpcInteract, history: dict[str, list[dict]]) -> NpcReply:
+        if client is None:
+            text = f"You clicked {msg.npc}"
+        else:
+            user_text = ""  # phase 3: no free-text input from the player yet
+            text = await llm_mod.reply(
+                client=client,
+                npc_name=msg.npc,
+                player_name=msg.player,
+                location=msg.location,
+                history=history.get(msg.npc, []),
+                user_text=user_text,
+            )
+        history.setdefault(msg.npc, []).append({"role": "user", "text": ""})
+        history[msg.npc].append({"role": "assistant", "text": text})
+        return NpcReply(id=msg.id, npc=msg.npc, text=text, done=True)
+
+    return handler
 
 
-async def _handle_client(ws: ServerConnection) -> None:
+async def _handle_client(ws, handler) -> None:
     history: dict[str, list[dict]] = {}
     log.info("client connected: %s", ws.remote_address)
     try:
@@ -46,8 +63,8 @@ async def _handle_client(ws: ServerConnection) -> None:
 
             if isinstance(msg, NpcInteract):
                 log.info("Player clicked %s id=%s loc=%s", msg.npc, msg.id, msg.location)
-                reply = await _handle_npc_interact(msg, history)
-                await ws.send(reply.model_dump_json())
+                reply_msg = await handler(msg, history)
+                await ws.send(reply_msg.model_dump_json())
 
             elif isinstance(msg, SessionReset):
                 log.info("session_reset (%s); clearing history", msg.reason)
@@ -62,12 +79,14 @@ async def _handle_client(ws: ServerConnection) -> None:
 
 
 @asynccontextmanager
-async def serve(host: str = "127.0.0.1", port: int = 8765) -> AsyncIterator:
-    """Start the server; yield the underlying websockets.Server.
+async def serve(host: str = "127.0.0.1", port: int = 8765, *, client_factory=None) -> AsyncIterator:
+    """Start the server. If client_factory is None, the handler echoes."""
+    handler = _make_handler(client_factory)
 
-    Returning the underlying object lets tests read the bound port when port=0.
-    """
-    server = await websockets.serve(_handle_client, host, port)
+    async def per_client(ws):
+        await _handle_client(ws, handler)
+
+    server = await websockets.serve(per_client, host, port)
     try:
         yield server
     finally:
@@ -75,11 +94,12 @@ async def serve(host: str = "127.0.0.1", port: int = 8765) -> AsyncIterator:
         await server.wait_closed()
 
 
-async def _amain(host: str, port: int) -> None:
-    async with serve(host, port) as server:
+async def _amain(host: str, port: int, use_llm: bool) -> None:
+    factory = llm_mod.make_client if use_llm else None
+    async with serve(host, port, client_factory=factory) as server:
         bound_port = server.sockets[0].getsockname()[1]
-        log.info("listening on ws://%s:%s", host, bound_port)
-        await asyncio.Future()  # run forever
+        log.info("listening on ws://%s:%s (llm=%s)", host, bound_port, use_llm)
+        await asyncio.Future()
 
 
 def main() -> None:
@@ -87,6 +107,7 @@ def main() -> None:
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8765)
     parser.add_argument("--debug", action="store_true")
+    parser.add_argument("--echo", action="store_true", help="Use echo handler instead of LLM.")
     args = parser.parse_args()
 
     logging.basicConfig(
@@ -94,7 +115,7 @@ def main() -> None:
         format="%(asctime)s %(levelname)s %(name)s | %(message)s",
     )
     try:
-        asyncio.run(_amain(args.host, args.port))
+        asyncio.run(_amain(args.host, args.port, use_llm=not args.echo))
     except KeyboardInterrupt:
         pass
 
