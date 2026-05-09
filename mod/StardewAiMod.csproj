@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <RootNamespace>StardewAiMod</RootNamespace>
+    <AssemblyName>StardewAiMod</AssemblyName>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <EnableHarmony>true</EnableHarmony>
+    <GamePath>/Users/suchong/Library/Application Support/Steam/steamapps/common/Stardew Valley/Contents/MacOS</GamePath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Pathoschild.Stardew.ModBuildConfig" Version="4.3.2" />
+  </ItemGroup>
+</Project>
