@@ -29,10 +29,7 @@ namespace StardewAiMod
             _bridge = new BridgeClient(BridgeUrl, this.Monitor);
             _bridge.Start();
 
-            // NOTE: Initialize signature is updated in Task 13 to also pass `this`.
-            // Until then the patch keeps using its hardcoded "Hello from AI Mod!" reply,
-            // which is fine — this task only adds the bridge plumbing on the ModEntry side.
-            NpcCheckActionPatch.Initialize(this.Monitor);
+            NpcCheckActionPatch.Initialize(this.Monitor, this);
 
             var harmony = new Harmony(this.ModManifest.UniqueID);
             harmony.PatchAll();
