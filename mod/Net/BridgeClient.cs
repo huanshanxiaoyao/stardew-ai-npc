@@ -44,11 +44,11 @@ namespace StardewAiMod.Net
             try { _ws?.Abort(); } catch { /* best effort */ }
         }
 
-        public string? SendNpcInteract(string npcName, string playerName, string location)
+        public string? SendNpcInteract(string npcName, string playerName, string location, GameState? state)
         {
             if (!_isConnected || _ws is null || _ws.State != WebSocketState.Open) return null;
             var id = Guid.NewGuid().ToString("N");
-            var msg = new NpcInteract(id, npcName, playerName, location, DateTimeOffset.UtcNow.ToUnixTimeSeconds());
+            var msg = new NpcInteract(id, npcName, playerName, location, DateTimeOffset.UtcNow.ToUnixTimeSeconds(), state);
             _ = SendJsonAsync(JsonSerializer.Serialize(msg));
             return id;
         }
