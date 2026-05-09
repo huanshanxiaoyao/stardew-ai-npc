@@ -38,7 +38,8 @@ namespace StardewAiMod.Patches
             var placeholder = new DialogueBox("…");
             Game1.activeClickableMenu = placeholder;
 
-            var id = bridge.SendNpcInteract(__instance.Name, who.Name, l?.Name ?? "Unknown");
+            var state = StardewAiMod.Game.StateCollector.Collect();
+            var id = bridge.SendNpcInteract(__instance.Name, who.Name, l?.Name ?? "Unknown", state);
             if (id is null)
             {
                 // Send failed (e.g. just disconnected). Drop the placeholder and let native run next click.

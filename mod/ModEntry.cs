@@ -30,6 +30,7 @@ namespace StardewAiMod
             _bridge.Start();
 
             NpcCheckActionPatch.Initialize(this.Monitor, this);
+            StardewAiMod.Game.StateCollector.Initialize(this.Monitor);
 
             var harmony = new Harmony(this.ModManifest.UniqueID);
             harmony.PatchAll();
