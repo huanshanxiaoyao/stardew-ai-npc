@@ -20,6 +20,7 @@ namespace StardewAiMod.Net
         private readonly Uri _uri;
         private readonly IMonitor _monitor;
         private readonly CancellationTokenSource _cts = new();
+        private readonly SemaphoreSlim _sendLock = new(1, 1);
         private ClientWebSocket? _ws;
         private volatile bool _isConnected;
 
@@ -61,16 +62,22 @@ namespace StardewAiMod.Net
 
         private async Task SendJsonAsync(string json)
         {
+            // ClientWebSocket.SendAsync only supports one outstanding send at a time.
+            await _sendLock.WaitAsync(_cts.Token);
             try
             {
-                var bytes = Encoding.UTF8.GetBytes(json);
                 var ws = _ws;
-                if (ws is null) return;
+                if (ws is null || ws.State != WebSocketState.Open) return;
+                var bytes = Encoding.UTF8.GetBytes(json);
                 await ws.SendAsync(new ArraySegment<byte>(bytes), WebSocketMessageType.Text, true, _cts.Token);
             }
             catch (Exception ex)
             {
                 _monitor.Log($"Bridge: send failed: {ex.Message}", LogLevel.Warn);
+            }
+            finally
+            {
+                try { _sendLock.Release(); } catch (ObjectDisposedException) { }
             }
         }
 

@@ -37,6 +37,9 @@ namespace StardewAiMod
             helper.Events.GameLoop.UpdateTicked += this.OnUpdateTicked;
             helper.Events.GameLoop.ReturnedToTitle += this.OnReturnedToTitle;
 
+            // SMAPI 4.5.2's IGameLoopEvents has no GameExiting event; hook the runtime instead.
+            AppDomain.CurrentDomain.ProcessExit += (_, _) => _bridge?.Stop();
+
             this.Monitor.Log("StardewAiMod loaded; Harmony + bridge active.", LogLevel.Info);
         }
 

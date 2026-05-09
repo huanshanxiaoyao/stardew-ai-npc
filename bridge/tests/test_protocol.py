@@ -1,7 +1,5 @@
 import json
 
-import pytest
-
 from bridge.protocol import (
     NpcInteract,
     NpcReply,
