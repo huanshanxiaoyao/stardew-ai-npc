@@ -10,6 +10,20 @@ from typing import Literal, Optional, Union
 from pydantic import BaseModel, ValidationError
 
 
+class GameDate(BaseModel):
+    year: int
+    season: str         # spring | summer | fall | winter
+    day: int
+    dayOfWeek: str      # Mon..Sun
+
+
+class GameState(BaseModel):
+    date: GameDate
+    weather: str        # sunny | rainy | snowy | stormy
+    spouse: Optional[str] = None
+    activeQuests: list[str] = []
+
+
 class NpcInteract(BaseModel):
     type: Literal["npc_interact"] = "npc_interact"
     v: Literal[1] = 1
@@ -18,6 +32,7 @@ class NpcInteract(BaseModel):
     player: str
     location: str
     ts: int
+    state: Optional[GameState] = None
 
 
 class NpcReply(BaseModel):
@@ -56,8 +71,7 @@ _TYPES: dict[str, type[BaseModel]] = {
 def parse_message(raw: str) -> Optional[Message]:
     """Parse a JSON frame. Returns None on malformed input or unknown type.
 
-    Soft-fail by design: protocol §5 says unknown types are logged and ignored,
-    not treated as fatal.
+    Soft-fail by design: unknown types are logged and ignored, not fatal.
     """
     try:
         obj = json.loads(raw)
