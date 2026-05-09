@@ -12,7 +12,6 @@ from contextlib import asynccontextmanager
 from typing import AsyncIterator
 
 import websockets
-from websockets.asyncio.server import ServerConnection
 
 from bridge import llm as llm_mod
 from bridge.protocol import (
