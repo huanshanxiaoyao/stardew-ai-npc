@@ -43,6 +43,37 @@ namespace StardewAiMod.Net
             try { _ws?.Abort(); } catch { /* best effort */ }
         }
 
+        public string? SendNpcInteract(string npcName, string playerName, string location)
+        {
+            if (!_isConnected || _ws is null || _ws.State != WebSocketState.Open) return null;
+            var id = Guid.NewGuid().ToString("N");
+            var msg = new NpcInteract(id, npcName, playerName, location, DateTimeOffset.UtcNow.ToUnixTimeSeconds());
+            _ = SendJsonAsync(JsonSerializer.Serialize(msg));
+            return id;
+        }
+
+        public void SendSessionReset(string reason)
+        {
+            if (!_isConnected || _ws is null || _ws.State != WebSocketState.Open) return;
+            var msg = new SessionReset(reason);
+            _ = SendJsonAsync(JsonSerializer.Serialize(msg));
+        }
+
+        private async Task SendJsonAsync(string json)
+        {
+            try
+            {
+                var bytes = Encoding.UTF8.GetBytes(json);
+                var ws = _ws;
+                if (ws is null) return;
+                await ws.SendAsync(new ArraySegment<byte>(bytes), WebSocketMessageType.Text, true, _cts.Token);
+            }
+            catch (Exception ex)
+            {
+                _monitor.Log($"Bridge: send failed: {ex.Message}", LogLevel.Warn);
+            }
+        }
+
         private async Task ConnectLoopAsync(CancellationToken ct)
         {
             int delayMs = 1000;
