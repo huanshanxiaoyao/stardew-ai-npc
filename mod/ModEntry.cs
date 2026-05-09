@@ -1,3 +1,5 @@
+using HarmonyLib;
+using StardewAiMod.Patches;
 using StardewModdingAPI;
 
 namespace StardewAiMod
@@ -6,7 +8,12 @@ namespace StardewAiMod
     {
         public override void Entry(IModHelper helper)
         {
-            this.Monitor.Log("StardewAiMod loaded.", LogLevel.Info);
+            NpcCheckActionPatch.Initialize(this.Monitor);
+
+            var harmony = new Harmony(this.ModManifest.UniqueID);
+            harmony.PatchAll();
+
+            this.Monitor.Log("StardewAiMod loaded; Harmony patches applied.", LogLevel.Info);
         }
     }
 }
