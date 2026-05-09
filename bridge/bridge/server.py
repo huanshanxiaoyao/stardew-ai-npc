@@ -40,8 +40,11 @@ def _make_handler(client_factory):
                 location=msg.location,
                 history=history.get(msg.npc, []),
                 user_text=user_text,
+                state=msg.state.model_dump() if msg.state else None,
             )
-        history.setdefault(msg.npc, []).append({"role": "user", "text": ""})
+        history.setdefault(msg.npc, []).append(
+            {"role": "user", "text": llm_mod.PLAYER_APPROACH_MARKER}
+        )
         history[msg.npc].append({"role": "assistant", "text": text})
         return NpcReply(id=msg.id, npc=msg.npc, text=text, done=True)
 
