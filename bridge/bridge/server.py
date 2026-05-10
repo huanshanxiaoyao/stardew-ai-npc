@@ -58,13 +58,18 @@ async def _handle_client(ws, handler) -> None:
         async for raw in ws:
             if isinstance(raw, bytes):
                 raw = raw.decode("utf-8", errors="replace")
+            log.debug("← raw frame: %s", raw)
             msg = parse_message(raw)
             if msg is None:
                 log.warning("ignoring malformed/unknown frame: %r", raw[:200])
                 continue
 
             if isinstance(msg, NpcInteract):
-                log.info("Player clicked %s id=%s loc=%s", msg.npc, msg.id, msg.location)
+                log.info(
+                    "Player clicked %s id=%s loc=%s state=%s",
+                    msg.npc, msg.id, msg.location,
+                    "present" if msg.state else "absent",
+                )
                 reply_msg = await handler(msg, history)
                 await ws.send(reply_msg.model_dump_json())
 
